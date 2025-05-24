@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <link rel="icon" href="https://static.toss.im/icons/png/4x/icon-toss-logo.png"/>
+    <link rel="stylesheet" type="text/css" href="css/style.css"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>구매하기</title>
+    <script src="https://js.tosspayments.com/v2/standard"></script>
+</head>
+
+<body>
+<!-- 주문서 영역 -->
+<div class="wrapper">
+    <div class="box_section" style="padding: 40px 30px 50px 30px; margin-top: 30px; margin-bottom: 50px">
+        <div id="order-info" style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+            <h3 style="margin-bottom: 10px; color: #333;">주문 정보</h3>
+            <div id="order-details">
+                <p>상품명: <span id="order-name">-</span></p>
+                <p>
+                    결제 금액:
+                    <span id="price-display">
+                        <span id="original-price-display" style="display: inline;">
+                            <span id="original-price">-</span>원
+                        </span>
+                        <span id="discount-price-display" style="display: none; color: #FF5722; font-weight: bold;">
+                            <span id="original-price-strike"
+                                  style="text-decoration: line-through; color: #888; margin-right: 5px;"></span>
+                            <span id="discounted-price"></span>원 
+                            <span style="font-size: 13px; color: #FF5722;">(5,000원 할인)</span>
+                        </span>
+                    </span>
+                </p>
+                <p>크레딧: <span id="credit-amount">-</span></p>
+            </div>
+        </div>
+        <!-- 결제 UI -->
+        <div id="payment-method"></div>
+        <!-- 이용약관 UI -->
+        <div id="agreement"></div>
+        <!-- 쿠폰 체크박스 -->
+        <div class="coupon-container">
+            <div class="checkable typography--p">
+                <label for="coupon-box" class="checkable__label typography--regular"
+                ><input id="coupon-box" class="checkable__input" type="checkbox" aria-checked="true"/><span
+                        class="checkable__label-text">5,000원 쿠폰 적용</span></label
+                >
+            </div>
+        </div>
+        <!-- 결제하기 버튼 -->
+        <div class="result wrapper">
+            <button class="button" id="payment-button" style="margin-top: 30px">
+                결제하기
+            </button>
+        </div>
+    </div>
+    <script>
+        main();
+
+        async function main() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderId = urlParams.get('orderId') || generateRandomString();
+            const orderName = urlParams.get('orderName') || "토스 티셔츠 외 2건";
+            const userId = urlParams.get('userId') || "익명 사용자";
+            const creditAmount = urlParams.get('creditAmount') || "0";
+
+            // 결제 금액 추출 (기본값: 5000)
+            let priceValue = urlParams.get('amount');
+            let amountValue = 5000;
+
+            // 금액이 URL 파라미터로 전달되었으면 사용
+            if (priceValue && !isNaN(parseInt(priceValue))) {
+                amountValue = parseInt(priceValue);
+            }
+
+            // 주문 정보 화면에 표시
+            document.getElementById('order-name').textContent = orderName;
+            document.getElementById('original-price').textContent = amountValue.toLocaleString('ko-KR');
+            document.getElementById('credit-amount').textContent = creditAmount;
+
+            // 초기 상태에서는 할인 전 금액만 표시
+            document.getElementById('original-price-display').style.display = 'inline';
+            document.getElementById('discount-price-display').style.display = 'none';
+
+            const button = document.getElementById("payment-button");
+            const coupon = document.getElementById("coupon-box");
+
+            // 결제 금액 설정 (URL에서 가져온 값 사용)
+            const amount = {
+                currency: "KRW",
+                value: amountValue,
+            };
+
+            // ------  결제위젯 초기화 ------
+            const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
+            // 로그인한 사용자 ID가 있으면 사용, 없으면 랜덤 생성
+            const customerKey = userId || generateRandomString();
+            const tossPayments = TossPayments(clientKey);
+
+            // 회원 결제
+            const widgets = tossPayments.widgets({
+                customerKey,
+            });
+
+            // ------  주문서의 결제 금액 설정 ------
+            // 파라미터에서 가져온 금액으로 초기화
+            await widgets.setAmount(amount);
+
+            // ------  결제 UI 렌더링 ------
+            await widgets.renderPaymentMethods({
+                selector: "#payment-method",
+                variantKey: "DEFAULT",
+            });
+
+            // ------  이용약관 UI 렌더링 ------
+            await widgets.renderAgreement({selector: "#agreement", variantKey: "AGREEMENT"});
+
+            // ------  주문서의 결제 금액이 변경되었을 경우 결제 금액 업데이트 ------
+            coupon.addEventListener("change", async function () {
+                if (coupon.checked) {
+                    // 쿠폰 적용 시 5,000원 할인
+                    const discountedAmount = {
+                        currency: "KRW",
+                        value: Math.max(0, amount.value - 5000) // 음수 방지
+                    };
+
+                    // 할인된 금액으로 결제 위젯 업데이트
+                    await widgets.setAmount(discountedAmount);
+
+                    // UI 업데이트: 할인 전/후 금액 표시
+                    document.getElementById('original-price-display').style.display = 'none';
+                    document.getElementById('discount-price-display').style.display = 'inline';
+                    document.getElementById('original-price-strike').textContent = amount.value.toLocaleString('ko-KR');
+                    document.getElementById('discounted-price').textContent = discountedAmount.value.toLocaleString('ko-KR');
+
+                    // 300원 미만 결제 처리 안내
+                    if (discountedAmount.value < 300 && discountedAmount.value > 0) {
+                        // 결제 버튼 문구 변경
+                        button.innerText = '소액 결제 처리 (자동 성공)';
+                        button.style.backgroundColor = '#4CAF50';
+                    } else if (discountedAmount.value === 0) {
+                        // 결제 금액이 0원인 경우
+                        button.innerText = '무료 결제 처리';
+                        button.style.backgroundColor = '#4CAF50';
+                    } else {
+                        // 일반 결제
+                        button.innerText = '결제하기';
+                        button.style.backgroundColor = '';
+                    }
+                    return;
+                }
+
+                // 쿠폰 미적용 시 원래 금액으로 복원
+                await widgets.setAmount(amount);
+
+                // UI 업데이트: 원래 금액만 표시
+                document.getElementById('original-price-display').style.display = 'inline';
+                document.getElementById('discount-price-display').style.display = 'none';
+                document.getElementById('original-price').textContent = amount.value.toLocaleString('ko-KR');
+
+                // 300원 미만 결제 처리 안내
+                if (amount.value < 300 && amount.value > 0) {
+                    // 결제 버튼 문구 변경
+                    button.innerText = '소액 결제 처리 (자동 성공)';
+                    button.style.backgroundColor = '#4CAF50';
+                } else {
+                    // 일반 결제
+                    button.innerText = '결제하기';
+                    button.style.backgroundColor = '';
+                }
+            });
+
+            // ------ '결제하기' 버튼 누르면 결제창 띄우기 ------
+            button.addEventListener("click", async function () {
+                // URL 파라미터의 값이나 세션 스토리지의 값을 사용
+                const customerEmail = `${userId}@example.com`;
+                const customerName = userId;
+
+                // 현재 쿠폰 적용 여부에 따른 최종 결제 금액 확인
+                const finalAmount = coupon.checked
+                    ? Math.max(0, amount.value - 5000)
+                    : amount.value;
+
+                // 300원 미만인 경우 자동 성공 처리
+                if (finalAmount < 300) {
+                    // 소액 결제 자동 처리 메시지 표시
+                    const autoProcessMsg = document.createElement('div');
+                    autoProcessMsg.style.padding = '15px';
+                    autoProcessMsg.style.backgroundColor = '#f0f8ff';
+                    autoProcessMsg.style.border = '1px solid #4CAF50';
+                    autoProcessMsg.style.borderRadius = '5px';
+                    autoProcessMsg.style.margin = '20px 0';
+                    autoProcessMsg.style.textAlign = 'center';
+                    autoProcessMsg.innerHTML = `
+                        <h3 style="color: #4CAF50; margin: 0 0 10px 0;">소액 결제 자동 처리 중...</h3>
+                        <p>결제 금액 ${finalAmount}원은 300원 미만이므로 자동으로 성공 처리됩니다.</p>
+                        <p>잠시만 기다려주세요.</p>
+                    `;
+
+                    // 메시지를 버튼 위에 삽입
+                    button.parentNode.insertBefore(autoProcessMsg, button);
+
+                    // 버튼 비활성화 및 스타일 변경
+                    button.disabled = true;
+                    button.style.backgroundColor = '#cccccc';
+
+                    // 짧은 지연 후 성공 페이지로 이동 (자동 성공 처리 시뮬레이션)
+                    setTimeout(() => {
+                        // 자동 성공 파라미터 추가
+                        window.location.href = `${window.location.origin}/success.html?orderId=${orderId}&amount=${finalAmount}&orderName=${encodeURIComponent(orderName)}&userId=${encodeURIComponent(userId)}&creditAmount=${creditAmount}&autoProcessed=true`;
+                    }, 2000);
+
+                    return;
+                }
+
+                // 일반 결제 프로세스 (300원 이상)
+                try {
+                    // 결제 정보에 크레딧 수량 추가하여 성공 페이지로 전달
+                    await widgets.requestPayment({
+                        orderId: orderId,
+                        orderName: orderName,
+                        successUrl: `${window.location.origin}/success.html?orderId=${orderId}&amount=${finalAmount}&orderName=${encodeURIComponent(orderName)}&userId=${encodeURIComponent(userId)}&creditAmount=${creditAmount}`,
+                        failUrl: `${window.location.origin}/fail.html`,
+                        customerEmail: customerEmail,
+                        customerName: customerName,
+                        customerMobilePhone: "01012341234",
+                    });
+                } catch (error) {
+                    console.error("결제 요청 중 오류 발생:", error);
+
+                    // 오류 메시지 표시
+                    const errorMsg = document.createElement('div');
+                    errorMsg.style.padding = '15px';
+                    errorMsg.style.backgroundColor = '#fff0f0';
+                    errorMsg.style.border = '1px solid #ff5722';
+                    errorMsg.style.borderRadius = '5px';
+                    errorMsg.style.margin = '20px 0';
+                    errorMsg.style.textAlign = 'center';
+                    errorMsg.innerHTML = `
+                        <h3 style="color: #ff5722; margin: 0 0 10px 0;">결제 오류</h3>
+                        <p>${error.message || '결제 처리 중 문제가 발생했습니다.'}</p>
+                    `;
+
+                    // 메시지를 버튼 위에 삽입
+                    button.parentNode.insertBefore(errorMsg, button);
+                }
+            });
+        }
+
+        function generateRandomString() {
+            return window.btoa(Math.random().toString()).slice(0, 20);
+        }
+    </script>
+</div>
+</body>
+</html>

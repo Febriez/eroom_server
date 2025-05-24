@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>크레딧 구매</title>
+    <link rel="stylesheet" type="text/css" href="css/style.css"/>
+    <link rel="icon" href="https://static.toss.im/icons/png/4x/icon-toss-logo.png"/>
+
+    <!-- 인라인 스타일 우선 적용을 위한 설정 -->
+    <style>
+        /* 기본 스타일 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: #666;
+            margin-top: 15px;
+        }
+
+        /* 선택된 패키지에 대한 최상위 스타일 */
+        .credit-package.selected {
+            border: 3px solid #FF5722 !important;
+            box-shadow: 0 5px 20px rgba(255, 87, 34, 0.3) !important;
+            transform: translateY(-5px) !important;
+            background-color: #FFF8F6 !important;
+            z-index: 10 !important;
+        }
+
+        /* 클릭 가능한 요소 스타일 */
+        .credit-package, #logout-button {
+            cursor: pointer !important;
+        }
+
+        /* 선택 표시 아이콘 강제 표시 */
+        .credit-package.selected .selection-mark {
+            display: flex !important;
+        }
+
+        /* 크레딧 패키지 스타일 */
+        .credit-package {
+            border: 1px solid #E5E8EB;
+            border-radius: 12px;
+            padding: 20px;
+            width: 200px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            position: relative;
+            margin-top: 25px; /* 태그가 잘리지 않도록 상단 여백 더 증가 */
+        }
+
+        /* 라벨 공간 확보를 위한 마진 방식으로 변경 */
+        .credit-package {
+            margin-top: 30px; /* 태그가 잘리지 않도록 상단 여백 증가 */
+        }
+
+        /* 선택된 패키지 스타일 */
+        .credit-package.selected {
+            border: 3px solid #FF5722 !important; /* 선택된 패키지의 테두리 두께 */
+            box-shadow: 0 5px 20px rgba(255, 87, 34, 0.3) !important; /* 선택된 패키지의 그림자 강화 */
+            transform: translateY(-5px) !important; /* 위로 올라가는 효과 */
+            z-index: 3 !important; /* 다른 요소보다 위에 표시 */
+            background-color: #FFF8F6 !important; /* 배경색 변경 */
+            transition: all 0.3s ease !important; /* 트랜지션 효과 */
+        }
+
+        /* 인기/최고가치와 선택 상태가 동시에 적용될 때 */
+        .credit-package.popular.selected {
+            border: 3px solid #FF5722 !important; /* 선택 색상 우선 적용 */
+        }
+
+        .credit-package.best-value.selected {
+            border: 3px solid #FF5722 !important; /* 선택 색상 우선 적용 */
+        }
+
+        .credit-package.popular {
+            position: relative;
+            border-color: #3182F6;
+        }
+
+        /* 패키지 헤더 스타일 */
+        .package-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .credit-amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-right: 10px;
+        }
+
+        .credit-icon {
+            font-size: 24px;
+        }
+
+        /* 패키지 본문 스타일 */
+        .package-body {
+            text-align: center;
+        }
+
+        .package-price {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .package-description {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* 인기 태그 스타일 수정 - 가상 요소 대신 실제 요소로 변경 */
+        .credit-package.popular .badge,
+        .credit-package.best-value .badge {
+            position: absolute;
+            top: -15px;
+            right: 10px;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 20; /* z-index 값 증가 */
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            white-space: nowrap;
+            transform: translateY(-50%);
+            overflow: visible; /* 넘치는 부분도 표시되도록 설정 */
+        }
+
+        .credit-package.popular .badge {
+            background-color: #3182F6;
+        }
+
+        .credit-package.best-value .badge {
+            background-color: #00c471;
+        }
+
+        /* 가상 요소 제거 */
+        .credit-package.popular::before,
+        .credit-package.best-value::before {
+            content: none;
+        }
+
+        /* 최고 가치 태그 스타일 */
+        .credit-package.best-value {
+            position: relative;
+            border-color: #00c471;
+        }
+
+        /* 선택된 패키지 정보 영역 스타일 */
+        .selected-package-info {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: block;
+            width: 100%;
+            overflow: visible;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* 결제 버튼 컨테이너 스타일 */
+        #payment-button-container {
+            margin: 20px auto;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        /* 결제 버튼 스타일 */
+        .payment-button {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            background-color: #3182F6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(49, 130, 246, 0.2);
+            display: block;
+            margin: 20px auto;
+        }
+
+        .payment-button:hover {
+            background-color: #1c64d8;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(49, 130, 246, 0.3);
+        }
+
+        /* 사용자 정보 영역 스타일 */
+        .user-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0 20px;
+            font-size: 14px;
+            color: #4a5568;
+            gap: 10px;
+        }
+
+        .user-info strong {
+            color: #3182F6;
+            font-weight: bold;
+        }
+
+        #logout-button {
+            background: none;
+            border: none;
+            color: #4a5568;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: underline;
+            padding: 0;
+        }
+
+        #logout-button:hover {
+            color: #e53e3e;
+        }
+
+        /* 크레딧 패키지 컨테이너 스타일 수정 */
+        .credit-packages {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 30px; /* 간격 증가 */
+            margin: 40px 0; /* 상하 여백 증가 */
+            justify-items: center;
+            padding-top: 10px; /* 상단 패딩 추가 */
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 선택 표시 아이콘을 별도 요소로 추가 */
+        .selection-mark {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #FF5722;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        /* 선택 표시 아이콘은 JavaScript에서 직접 제어 */
+        .credit-package.selected .selection-mark {
+            display: flex !important;
+        }
+
+        /* 선택된 패키지 내 텍스트 스타일 강화 */
+        .credit-package.selected .credit-amount {
+            color: #FF5722 !important;
+            font-weight: bold !important;
+        }
+
+        /* 선택된 패키지 내 가격 강조 */
+        .credit-package.selected .package-price {
+            color: #FF5722 !important;
+            font-weight: bold !important;
+        }
+
+        /* 배지 스타일 추가 */
+        .badge {
+            position: absolute;
+            top: -15px;
+            right: 10px;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 20;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            overflow: visible;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>크레딧 구매</h1>
+        <div class="user-info">
+            <span>사용자 ID: <strong id="user-id-display">-</strong></span>
+            <button id="logout-button">로그아웃</button>
+        </div>
+        <p>원하시는 크레딧 패키지를 선택해주세요</p>
+    </header>
+
+    <div class="credit-packages" style="margin-top: 20px; overflow: visible;">
+        <div class="credit-package" data-credit="10" data-price="1000">
+            <div class="selection-mark">✓</div>
+            <div class="package-header">
+                <div class="credit-amount">10</div>
+                <div class="credit-icon">💰</div>
+            </div>
+            <div class="package-body">
+                <div class="package-price">1,000원</div>
+                <div class="package-description">기본 패키지</div>
+            </div>
+        </div>
+
+        <div class="credit-package" data-credit="22" data-price="2000">
+            <div class="selection-mark">✓</div>
+            <div class="package-header">
+                <div class="credit-amount">22</div>
+                <div class="credit-icon">💰</div>
+            </div>
+            <div class="package-body">
+                <div class="package-price">2,000원</div>
+                <div class="package-description">10% 추가 보너스</div>
+            </div>
+        </div>
+
+        <div class="credit-package" data-credit="48" data-price="4000">
+            <div class="selection-mark">✓</div>
+            <div class="package-header">
+                <div class="credit-amount">48</div>
+                <div class="credit-icon">💰</div>
+            </div>
+            <div class="package-body">
+                <div class="package-price">4,000원</div>
+                <div class="package-description">20% 추가 보너스</div>
+            </div>
+        </div>
+
+        <div class="credit-package popular" data-credit="105" data-price="8000">
+            <div class="badge" style="background-color: #3182F6;">인기</div>
+            <div class="selection-mark">✓</div>
+            <div class="package-header">
+                <div class="credit-amount">105</div>
+                <div class="credit-icon">💰</div>
+            </div>
+            <div class="package-body">
+                <div class="package-price">8,000원</div>
+                <div class="package-description">30% 추가 보너스</div>
+            </div>
+        </div>
+
+        <div class="credit-package" data-credit="300" data-price="20000">
+            <div class="selection-mark">✓</div>
+            <div class="package-header">
+                <div class="credit-amount">300</div>
+                <div class="credit-icon">💰</div>
+            </div>
+            <div class="package-body">
+                <div class="package-price">20,000원</div>
+                <div class="package-description">50% 추가 보너스</div>
+            </div>
+        </div>
+
+        <div class="credit-package best-value" data-credit="1000" data-price="50000">
+            <div class="badge" style="background-color: #00c471;">최고 가치</div>
+            <div class="selection-mark">✓</div>
+            <div class="package-header">
+                <div class="credit-amount">1000</div>
+                <div class="credit-icon">💰</div>
+            </div>
+            <div class="package-body">
+                <div class="package-price">50,000원</div>
+                <div class="package-description">100% 추가 보너스</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="selected-package-info">
+        <div id="payment-button-container">
+            <button id="payment-button" class="payment-button">
+                결제하기
+            </button>
+            <div class="payment-status" style="margin-top: 10px; font-size: 14px; color: #666; text-align: center;">
+                패키지를 선택하여 결제를 진행하세요
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 직접 스크립트 코드 포함 -->
+<script>
+    // 전역 변수로 선택된 패키지 추적
+    let selectedPackage = null;
+
+    // 패키지 선택 함수
+    function selectPackage(packageElement) {
+        // 모든 패키지 초기화
+        document.querySelectorAll('.credit-package').forEach(p => {
+            p.classList.remove('selected');
+            p.style.border = '1px solid #E5E8EB';
+            p.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.05)';
+            p.style.transform = 'none';
+            p.style.backgroundColor = '#fff';
+            p.style.zIndex = '1';
+
+            const mark = p.querySelector('.selection-mark');
+            if (mark) mark.style.display = 'none';
+        });
+
+        // 선택 상태 적용
+        selectedPackage = packageElement;
+        packageElement.classList.add('selected');
+        packageElement.style.border = '3px solid #FF5722';
+        packageElement.style.boxShadow = '0 5px 20px rgba(255, 87, 34, 0.3)';
+        packageElement.style.transform = 'translateY(-5px)';
+        packageElement.style.backgroundColor = '#FFF8F6';
+        packageElement.style.zIndex = '3';
+
+        const mark = packageElement.querySelector('.selection-mark');
+        if (mark) mark.style.display = 'flex';
+
+        // 선택 정보 업데이트
+        const creditAmount = packageElement.getAttribute('data-credit');
+        const price = packageElement.getAttribute('data-price');
+
+        // 결제 상태 UI 업데이트
+        const paymentStatus = document.querySelector('.payment-status');
+        if (paymentStatus) {
+            paymentStatus.textContent = `${creditAmount} 크레딧 - ${formatPrice(price)}원 결제 준비 완료`;
+        }
+
+        // 결제 버튼 활성화
+        const paymentButton = document.getElementById('payment-button');
+        if (paymentButton) {
+            paymentButton.disabled = false;
+            paymentButton.style.opacity = '1';
+        }
+    }
+
+    // 가격 포맷팅 함수 (1000 -> 1,000)
+    function formatPrice(price) {
+        return Number(price).toLocaleString('ko-KR');
+    }
+
+    // 페이지 로드 후 실행
+    document.addEventListener('DOMContentLoaded', () => {
+        // UID 확인 및 리다이렉트
+        const userId = sessionStorage.getItem('userId');
+        if (!userId) {
+            window.location.href = '/index.html';
+            return;
+        }
+
+        // 사용자 ID 표시
+        const userIdDisplay = document.getElementById('user-id-display');
+        if (userIdDisplay) {
+            userIdDisplay.textContent = userId;
+        }
+
+        // 로그아웃 버튼
+        const logoutButton = document.getElementById('logout-button');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', () => {
+                sessionStorage.removeItem('userId');
+                window.location.href = '/index.html';
+            });
+        }
+
+        // 각 패키지에 클릭 이벤트 리스너 추가
+        document.querySelectorAll('.credit-package').forEach(packageItem => {
+            // 기본 스타일 설정
+            packageItem.style.cursor = 'pointer';
+
+            // 클릭 이벤트 추가
+            packageItem.addEventListener('click', function (e) {
+                e.preventDefault();
+                selectPackage(this);
+            });
+
+            // 마우스오버 효과
+            packageItem.addEventListener('mouseover', function () {
+                if (!this.classList.contains('selected')) {
+                    this.style.transform = 'translateY(-3px)';
+                    this.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                }
+            });
+
+            // 마우스아웃 효과
+            packageItem.addEventListener('mouseout', function () {
+                if (!this.classList.contains('selected')) {
+                    this.style.transform = '';
+                    this.style.boxShadow = '';
+                }
+            });
+        });
+
+        // 결제하기 버튼 클릭 이벤트 - checkout.html로 이동
+        const paymentButton = document.getElementById('payment-button');
+        if (paymentButton) {
+            paymentButton.addEventListener('click', function () {
+                if (!selectedPackage) {
+                    alert('크레딧 패키지를 선택해주세요.');
+                    return;
+                }
+
+                const creditAmount = selectedPackage.getAttribute('data-credit');
+                const price = selectedPackage.getAttribute('data-price');
+                const productName = `${creditAmount} 크레딧`;
+
+                // 주문 ID 생성
+                const orderId = 'order_' + new Date().getTime() + '_' + Math.random().toString(36).substring(2, 8);
+
+                // 세션 스토리지에 선택한 패키지 정보 저장
+                sessionStorage.setItem('selectedCreditAmount', creditAmount);
+                sessionStorage.setItem('selectedPrice', price);
+                sessionStorage.setItem('orderId', orderId);
+                sessionStorage.setItem('productName', productName);
+
+                // checkout.html로 이동 - 파라미터 전달
+                window.location.href = `/checkout.html?orderId=${orderId}&amount=${price}&orderName=${encodeURIComponent(productName)}&userId=${encodeURIComponent(userId)}&creditAmount=${creditAmount}`;
+            });
+        }
+
+        // 인기 패키지 자동 선택
+        const popularPackage = document.querySelector('.credit-package.popular');
+        if (popularPackage) {
+            selectPackage(popularPackage);
+        }
+    });
+</script>
+</body>
+</html>

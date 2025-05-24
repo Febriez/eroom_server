@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <link rel="icon" href="https://static.toss.im/icons/png/4x/icon-toss-logo.png"/>
+    <link rel="stylesheet" type="text/css" href="css/style.css"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>결제 성공 - 크레딧 구매 완료</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .success-icon {
+            font-size: 60px;
+            color: #00c471;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .payment-details {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .detail-value {
+            color: #333;
+            word-break: break-all;
+        }
+        
+        .back-button {
+            display: inline-block;
+            background-color: #3182f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            margin-top: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        
+        .back-button:hover {
+            background-color: #1c6fdc;
+        }
+        
+        .user-highlight {
+            background-color: #e3f2fd;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-weight: bold;
+            color: #1c6fdc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✓</div>
+        <h1>결제가 성공적으로 완료되었습니다</h1>
+        <p>크레딧 구매가 완료되었습니다. 곧 계정에 반영됩니다.</p>
+        
+        <div class="payment-details">
+            <div class="detail-row">
+                <span class="detail-label">사용자 ID:</span>
+                <span id="userId" class="detail-value user-highlight">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">주문 번호:</span>
+                <span id="orderId" class="detail-value">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">상품명:</span>
+                <span id="orderName" class="detail-value">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">결제 금액:</span>
+                <span id="amount" class="detail-value">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">결제 수단:</span>
+                <span id="method" class="detail-value">-</span>
+            </div>
+        </div>
+        
+        <a href="/credit-shop.html" class="back-button">크레딧 상점으로 돌아가기</a>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // URL에서 쿼리 파라미터 가져오기
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderId = urlParams.get('orderId');
+            const amount = urlParams.get('amount');
+            const orderName = urlParams.get('orderName');
+            const userId = urlParams.get('userId');
+            const method = urlParams.get('method') || '카드';
+            const paymentKey = urlParams.get('paymentKey');
+            
+            // 세션에서 사용자 ID 가져오기
+            const sessionUserId = sessionStorage.getItem('userId');
+            
+            // 결제 정보 표시
+            document.getElementById('orderId').textContent = orderId || '-';
+            document.getElementById('orderName').textContent = orderName || '-';
+            document.getElementById('amount').textContent = amount ? `${Number(amount).toLocaleString()}원` : '-';
+            document.getElementById('method').textContent = method;
+            document.getElementById('userId').textContent = userId || sessionUserId || '-';
+            
+            // 사용자 ID가 URL에서 전달되지 않았다면 세션에서 가져옴
+            if (!userId && sessionUserId) {
+                // URL에 사용자 ID 추가 (히스토리는 변경하지 않음)
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.set('userId', sessionUserId);
+                window.history.replaceState({}, '', newUrl);
+            }
+            
+            // paymentKey가 있는 경우 서버에 결제 확인 요청
+            if (paymentKey && orderId && amount) {
+                confirmPayment(paymentKey, orderId, amount);
+            }
+        });
+        
+        // 서버로 결제 승인에 필요한 결제 정보를 보내는 함수
+        async function confirmPayment(paymentKey, orderId, amount) {
+            try {
+                const requestData = {
+                    paymentKey: paymentKey,
+                    orderId: orderId,
+                    amount: amount
+                };
+                
+                const response = await fetch("/confirm", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(requestData),
+                });
+                
+                const json = await response.json();
+                
+                if (!response.ok) {
+                    console.error('결제 확인 실패:', json);
+                    alert(`결제 확인 중 오류가 발생했습니다: ${json.message || '알 수 없는 오류'}`);
+                }
+                
+                console.log('결제 확인 응답:', json);
+            } catch (error) {
+                console.error('결제 확인 요청 중 오류:', error);
+            }
+        }
+    </script>
+</body>
+</html>
