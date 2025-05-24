@@ -1,9 +1,5 @@
 package com.febrie.payment;
 
-import com.febrie.payment.api.PaymentAPI;
-import com.febrie.payment.api.PaymentAPIImpl;
-import com.febrie.payment.controller.PaymentController;
-import com.febrie.payment.handler.PaymentHandler;
 import com.febrie.util.Logging;
 import com.sun.net.httpserver.HttpServer;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +12,7 @@ import java.util.concurrent.Executors;
 @Slf4j
 public class PaymentServer {
 
-    private static final String GAME_SERVER_URL = "http://localhost:8080"; // 게임 서버 URL 설정
+    private static final String GAME_SERVER_URL = "http://localhost:7998"; // 게임 서버 URL 설정
 
     private final HttpServer server;
 

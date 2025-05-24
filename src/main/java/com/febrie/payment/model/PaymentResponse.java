@@ -22,6 +22,4 @@ public class PaymentResponse {
     private String customerKey;       // 고객 키
     private String userId;            // 게임 사용자 ID
     private String creditAmount;      // 크레딧 수량
-    private Boolean couponApplied;    // 쿠폰 적용 여부
-    private Long originalAmount;      // 할인 전 원래 금액
 }
