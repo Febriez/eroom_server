@@ -18,6 +18,10 @@ public class Main {
     private final static Properties config = new Properties();
 
     public static void main(String @NotNull [] args) {
+        serverStart();
+    }
+
+    public static void serverStart() {
         Logging.info(log, "결제 서버 시작 중...");
         try {
             new HttpServer(port).start();
@@ -39,4 +43,5 @@ public class Main {
         }
         Logging.info(log, "서버 초기화가 완료되었습니다!");
     }
+
 }
