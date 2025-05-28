@@ -4,6 +4,7 @@ import com.febrie.util.Logging;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,12 +27,12 @@ public class PaymentHandler implements HttpHandler {
     }
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
+    public void handle(@NotNull HttpExchange exchange) throws IOException {
         String method = exchange.getRequestMethod();
 
         try {
             if ("POST".equals(method)) {
-                handlePaymentRequest(exchange);
+                    handlePaymentRequest(exchange);
             } else {
                 handleInvalidMethodRequest(exchange);
             }
@@ -105,7 +106,7 @@ public class PaymentHandler implements HttpHandler {
      */
     private String readRequestBody(HttpExchange exchange) throws IOException {
         try (InputStream inputStream = exchange.getRequestBody();
-             Scanner scanner = new Scanner(inputStream, StandardCharsets.UTF_8.name())) {
+             Scanner scanner = new Scanner(inputStream, StandardCharsets.UTF_8)) {
             scanner.useDelimiter("\\A");
             return scanner.hasNext() ? scanner.next() : "";
         }
